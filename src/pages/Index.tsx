@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, Users, Clock, ArrowUp, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { currentUser, userProfile } = useAuth();
 
   const features = [
     {
@@ -41,19 +43,38 @@ const Index = () => {
             EcommerceBot AI
           </div>
           <div className="flex gap-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate("/dashboard")}
-              className="hover:bg-white/20"
-            >
-              Dashboard
-            </Button>
-            <Button 
-              className="btn-primary"
-              onClick={() => navigate("/admin")}
-            >
-              Admin Panel
-            </Button>
+            {currentUser ? (
+              <>
+                <div className="flex items-center gap-2 text-sm">
+                  <span>{userProfile?.email}</span>
+                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded capitalize">
+                    {userProfile?.role}
+                  </span>
+                </div>
+                <Button 
+                  className="btn-primary"
+                  onClick={() => navigate("/dashboard")}
+                >
+                  Dashboard
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate("/auth")}
+                  className="hover:bg-white/20"
+                >
+                  Iniciar Sesión
+                </Button>
+                <Button 
+                  className="btn-primary"
+                  onClick={() => navigate("/auth")}
+                >
+                  Registrarse
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -71,21 +92,33 @@ const Index = () => {
             usando inteligencia artificial conversacional.
           </p>
           <div className="flex gap-4 justify-center">
-            <Button 
-              size="lg" 
-              className="btn-primary text-lg px-8 py-4"
-              onClick={() => navigate("/dashboard")}
-            >
-              Probar Dashboard
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="text-lg px-8 py-4 border-2 hover:bg-white/20"
-              onClick={() => navigate("/admin")}
-            >
-              Ver Admin Panel
-            </Button>
+            {currentUser ? (
+              <Button 
+                size="lg" 
+                className="btn-primary text-lg px-8 py-4"
+                onClick={() => navigate("/dashboard")}
+              >
+                Ir al Dashboard
+              </Button>
+            ) : (
+              <>
+                <Button 
+                  size="lg" 
+                  className="btn-primary text-lg px-8 py-4"
+                  onClick={() => navigate("/auth")}
+                >
+                  Comenzar Gratis
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="text-lg px-8 py-4 border-2 hover:bg-white/20"
+                  onClick={() => navigate("/auth")}
+                >
+                  Iniciar Sesión
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </section>
