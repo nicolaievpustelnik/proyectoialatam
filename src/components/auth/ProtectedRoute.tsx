@@ -14,7 +14,7 @@ const ProtectedRoute = ({ children, adminOnly = false }: ProtectedRouteProps) =>
     return <Auth />;
   }
 
-  if (adminOnly && userProfile.role !== 'admin') {
+  if (adminOnly && userProfile.rol !== 'admin') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">

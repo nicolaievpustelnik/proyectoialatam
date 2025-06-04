@@ -16,8 +16,8 @@ const RegisterForm = ({ onToggleMode }: RegisterFormProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<'admin' | 'cliente'>('cliente');
-  const [storeName, setStoreName] = useState('');
+  const [rol, setRol] = useState<'admin' | 'cliente'>('cliente');
+  const [empresaId, setEmpresaId] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
 
@@ -34,16 +34,17 @@ const RegisterForm = ({ onToggleMode }: RegisterFormProps) => {
       return;
     }
 
-    if (role === 'cliente' && !storeName) {
-      toast.error('Por favor ingresa el nombre de tu tienda');
+    if (rol === 'cliente' && !empresaId) {
+      toast.error('Por favor ingresa el ID de tu empresa');
       return;
     }
 
     try {
       setLoading(true);
-      await register(email, password, role, storeName);
+      await register(email, password, rol, empresaId);
       toast.success('¡Cuenta creada exitosamente!');
     } catch (error) {
+      console.error('Registration error:', error);
       toast.error('Error al crear la cuenta. Intenta de nuevo.');
     } finally {
       setLoading(false);
@@ -71,8 +72,8 @@ const RegisterForm = ({ onToggleMode }: RegisterFormProps) => {
           </div>
           
           <div>
-            <Label htmlFor="role">Tipo de Usuario</Label>
-            <Select value={role} onValueChange={(value: 'admin' | 'cliente') => setRole(value)}>
+            <Label htmlFor="rol">Tipo de Usuario</Label>
+            <Select value={rol} onValueChange={(value: 'admin' | 'cliente') => setRol(value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona tu rol" />
               </SelectTrigger>
@@ -83,14 +84,14 @@ const RegisterForm = ({ onToggleMode }: RegisterFormProps) => {
             </Select>
           </div>
 
-          {role === 'cliente' && (
+          {rol === 'cliente' && (
             <div>
-              <Label htmlFor="storeName">Nombre de la Tienda</Label>
+              <Label htmlFor="empresaId">ID de la Empresa</Label>
               <Input
-                id="storeName"
-                value={storeName}
-                onChange={(e) => setStoreName(e.target.value)}
-                placeholder="Mi Tienda Online"
+                id="empresaId"
+                value={empresaId}
+                onChange={(e) => setEmpresaId(e.target.value)}
+                placeholder="empresa123"
               />
             </div>
           )}

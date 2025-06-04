@@ -43,7 +43,7 @@ const DashboardLayout = ({ children, title, subtitle }: DashboardLayoutProps) =>
                 <div className="text-right">
                   <p className="text-sm font-medium">{userProfile?.email}</p>
                   <p className="text-xs text-gray-500 capitalize">
-                    {userProfile?.role} {userProfile?.storeName && `- ${userProfile.storeName}`}
+                    {userProfile?.rol} {userProfile?.empresaId && `- ${userProfile.empresaId}`}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -54,7 +54,7 @@ const DashboardLayout = ({ children, title, subtitle }: DashboardLayoutProps) =>
                   >
                     Inicio
                   </Button>
-                  {userProfile?.role === 'admin' && (
+                  {userProfile?.rol === 'admin' && (
                     <Button 
                       className="btn-primary"
                       onClick={() => navigate("/admin")}

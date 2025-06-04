@@ -13,8 +13,8 @@ import { auth, db } from '@/lib/firebase';
 interface UserProfile {
   uid: string;
   email: string;
-  role: 'admin' | 'cliente';
-  storeName?: string;
+  rol: 'admin' | 'cliente';
+  empresaId?: string;
   createdAt: Date;
 }
 
@@ -22,7 +22,7 @@ interface AuthContextType {
   currentUser: User | null;
   userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, role: 'admin' | 'cliente', storeName?: string) => Promise<void>;
+  register: (email: string, password: string, rol: 'admin' | 'cliente', empresaId?: string) => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
 }
@@ -42,18 +42,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const register = async (email: string, password: string, role: 'admin' | 'cliente', storeName?: string) => {
+  const register = async (email: string, password: string, rol: 'admin' | 'cliente', empresaId?: string) => {
     const { user } = await createUserWithEmailAndPassword(auth, email, password);
     
     const profile: UserProfile = {
       uid: user.uid,
       email: user.email!,
-      role,
-      storeName: role === 'cliente' ? storeName : undefined,
+      rol,
+      empresaId: rol === 'cliente' ? empresaId : undefined,
       createdAt: new Date()
     };
 
-    await setDoc(doc(db, 'users', user.uid), profile);
+    await setDoc(doc(db, 'usuarios', user.uid), profile);
   };
 
   const logout = async () => {
@@ -61,16 +61,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const fetchUserProfile = async (user: User) => {
-    const docRef = doc(db, 'users', user.uid);
+    console.log('Fetching user profile for:', user.uid);
+    const docRef = doc(db, 'usuarios', user.uid);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
+      console.log('User profile found:', docSnap.data());
       setUserProfile(docSnap.data() as UserProfile);
+    } else {
+      console.log('No user profile found in usuarios collection');
     }
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('Auth state changed:', user);
       setCurrentUser(user);
       if (user) {
         fetchUserProfile(user);
