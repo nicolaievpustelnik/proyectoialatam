@@ -62,14 +62,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchUserProfile = async (user: User) => {
     console.log('Fetching user profile for:', user.uid);
-    const docRef = doc(db, 'usuarios', user.uid);
-    const docSnap = await getDoc(docRef);
-    
-    if (docSnap.exists()) {
-      console.log('User profile found:', docSnap.data());
-      setUserProfile(docSnap.data() as UserProfile);
-    } else {
-      console.log('No user profile found in usuarios collection');
+    try {
+      const docRef = doc(db, 'usuarios', user.uid);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        console.log('User profile found:', data);
+        setUserProfile({
+          uid: data.uid,
+          email: data.email,
+          rol: data.rol,
+          empresaId: data.empresaId,
+          createdAt: data.createdAt?.toDate() || new Date()
+        });
+      } else {
+        console.log('No user profile found in usuarios collection');
+        setUserProfile(null);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      setUserProfile(null);
     }
   };
 

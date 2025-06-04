@@ -48,7 +48,7 @@ const Index = () => {
                 <div className="flex items-center gap-2 text-sm">
                   <span>{userProfile?.email}</span>
                   <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded capitalize">
-                    {userProfile?.role}
+                    {userProfile?.rol}
                   </span>
                 </div>
                 <Button 
