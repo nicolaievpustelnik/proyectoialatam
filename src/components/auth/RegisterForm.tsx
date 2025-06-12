@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -13,6 +14,8 @@ interface RegisterFormProps {
 }
 
 const RegisterForm = ({ onToggleMode }: RegisterFormProps) => {
+
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -35,7 +38,7 @@ const RegisterForm = ({ onToggleMode }: RegisterFormProps) => {
     }
 
     if (rol === 'cliente' && !empresaId) {
-      toast.error('Por favor ingresa el ID de tu empresa');
+      toast.error('Por favor ingresa el nombre de tu empresa');
       return;
     }
 
@@ -43,6 +46,7 @@ const RegisterForm = ({ onToggleMode }: RegisterFormProps) => {
       setLoading(true);
       await register(email, password, rol, empresaId);
       toast.success('¡Cuenta creada exitosamente!');
+      navigate('/dashboard');
     } catch (error) {
       console.error('Registration error:', error);
       toast.error('Error al crear la cuenta. Intenta de nuevo.');
@@ -86,7 +90,7 @@ const RegisterForm = ({ onToggleMode }: RegisterFormProps) => {
 
           {rol === 'cliente' && (
             <div>
-              <Label htmlFor="empresaId">ID de la Empresa</Label>
+              <Label htmlFor="empresaId">Nombre de la Empresa</Label>
               <Input
                 id="empresaId"
                 value={empresaId}

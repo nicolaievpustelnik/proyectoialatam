@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Users, Clock, ArrowUp, Check } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { MessageSquare, Users, Clock, ArrowUp, Check, BriefcaseBusiness, ChartNoAxesCombined, UserRoundCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
@@ -13,14 +14,23 @@ const Sidebar = ({ className }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { userProfile, logout } = useAuth();
 
   const menuItems = [
     { path: "/dashboard", label: "Dashboard", icon: Clock },
+    { path: "/clients", label: "Clientes", icon: Users },
     { path: "/products", label: "Productos", icon: Check },
     { path: "/orders", label: "Pedidos", icon: ArrowUp },
     { path: "/bot-config", label: "Config. Bot", icon: MessageSquare },
-    { path: "/analytics", label: "Analytics", icon: Users },
+    { path: "/analytics", label: "Analytics", icon: ChartNoAxesCombined },
   ];
+
+  if (userProfile?.rol === "admin") {
+    menuItems.push(
+      { path: "/companies", label: "Empresas", icon: BriefcaseBusiness },
+      { path: "/admins", label: "Administradores", icon: UserRoundCog },
+    );
+  }
 
   return (
     <div className={cn(

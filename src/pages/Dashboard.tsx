@@ -2,11 +2,13 @@
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import { MessageSquare, Users, Clock, ArrowUp, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { userProfile, logout } = useAuth();
 
   const stats = [
     {
@@ -105,6 +107,17 @@ const Dashboard = () => {
                 <Check className="h-5 w-5" />
                 Nuevo Producto
               </Button>
+
+              {userProfile?.rol === 'admin' && (
+                <Button 
+                  variant="outline" 
+                  className="h-16 flex flex-col gap-2 border-2"
+                  onClick={() => navigate("/companies")}
+                >
+                  Empresas
+                </Button>
+              )}
+
               <Button 
                 variant="outline" 
                 className="h-16 flex flex-col gap-2 border-2"
