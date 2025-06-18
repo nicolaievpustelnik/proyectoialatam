@@ -23,33 +23,16 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { updateDoc } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-
-type Product = {
-  id?: string;
-  nombre: string;
-  descripcion: string;
-  precio: number;
-  stock: number;
-  imagen?: string;
-  status: string;
-  empresa?: string;
-};
-
-type Empresa = {
-  id: string;
-  nombre: string;
-};
-
-type Usuario = {
-  rol: "admin" | "cliente";
-  empresa: string;
-};
-
-const Status = {
-  ACTIVO: "Activo",
-  SIN_STOCK: "Sin Stock",
-  PAUSADO: "Pausado",
-} as const;
+import { Product, Empresa, Usuario } from "@/interfaces";
+import { Status, Roles } from "@/constants";
+import {
+  getUsuarioByUid,
+  getEmpresas,
+  addProduct,
+  deleteProduct,
+  getProductsByEmpresa,
+  updateProduct,
+} from "@/lib/firebaseHelpers";
 
 const Products = () => {
   const { userProfile } = useAuth();
@@ -72,6 +55,35 @@ const Products = () => {
     empresa: "",
   });
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case Status.ACTIVO:
+        return "bg-green-100 text-green-800";
+      case Status.SIN_STOCK:
+        return "bg-red-100 text-red-800";
+      case Status.PAUSADO:
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.descripcion?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesEmpresa =
+      empresaFilter === "" || product.empresa === empresaFilter;
+
+    const matchesStatus =
+      statusFilter === "todos" ||
+      (statusFilter === "activo" && product.status === Status.ACTIVO) ||
+      (statusFilter === "sinStock" && product.stock === 0);
+
+    return matchesSearch && matchesEmpresa && matchesStatus;
+  });
+
   const handleEditProduct = (product: Product) => {
     setNewProduct(product);
     setEditMode(true);
@@ -92,7 +104,6 @@ const Products = () => {
     setShowModal(true);
   };
 
-
   const handleUpdateProduct = async () => {
     if (!newProduct.empresa || !newProduct.id) {
       alert("Faltan datos para actualizar el producto");
@@ -100,8 +111,7 @@ const Products = () => {
     }
 
     try {
-      const productRef = doc(db, `empresas/${newProduct.empresa}/productos/${newProduct.id}`);
-      await updateDoc(productRef, {
+      await updateProduct(newProduct.empresa, newProduct.id, {
         nombre: newProduct.nombre,
         descripcion: newProduct.descripcion,
         precio: newProduct.precio,
@@ -126,141 +136,84 @@ const Products = () => {
       const auth = getAuth();
       const user = auth.currentUser;
       if (user) {
-        await fetchUserAndProducts(user);
+        await fetchUserAndProducts({ uid: user.uid });
       }
     } catch (error) {
       console.error("Error al actualizar producto:", error);
     }
   };
 
-  useEffect(() => {
-    const fetchUserAndProducts = async (user: User) => {
-      try {
-        const userRef = doc(db, "usuarios", user.uid);
-        const userSnap = await getDoc(userRef);
+  const fetchUserAndProducts = async (user: { uid: string }) => {
+    try {
+      const usuarioData = await getUsuarioByUid(user.uid);
+      setUserData(usuarioData);
 
-        if (!userSnap.exists()) throw new Error("Usuario no encontrado");
-
-        const usuarioData = userSnap.data() as Usuario;
-        if (usuarioData) {
-          setUserData(usuarioData);
-
-          if (usuarioData.rol !== "admin") {
-            setNewProduct((prev) => ({
-              ...prev,
-              empresa: usuarioData.empresa || "",
-            }));
-          }
-        }
-
-        let empresasList: Empresa[] = [];
-
-        if (usuarioData.rol === "admin") {
-          const empresasSnapshot = await getDocs(collection(db, "empresas"));
-          empresasList = empresasSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            nombre: doc.data().nombre,
-          })) as Empresa[];
-          setEmpresas(empresasList);
-        }
-
-        let productsData: Product[] = [];
-
-        if (usuarioData.rol === "admin") {
-          for (const empresa of empresasList) {
-            const productosSnapshot = await getDocs(
-              collection(db, `empresas/${empresa.id}/productos`)
-            );
-            const productos = productosSnapshot.docs.map((doc) => ({
-              id: doc.id,
-              empresa: empresa.id,
-              ...doc.data(),
-            })) as Product[];
-
-            productsData.push(...productos);
-          }
-        } else {
-          const productosSnapshot = await getDocs(
-            collection(db, `empresas/${usuarioData.empresa}/productos`)
-          );
-          productsData = productosSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            empresa: usuarioData.empresa,
-            ...doc.data(),
-          })) as Product[];
-
-          setEmpresas([{ id: usuarioData.empresa, nombre: "Mi Empresa" }]);
-        }
-
-        setProducts(productsData);
-      } catch (error) {
-        console.error("Error al obtener productos de Firebase:", error);
-      } finally {
-        setLoading(false);
+      if (usuarioData.rol !== Roles.ADMIN) {
+        setNewProduct((prev) => ({
+          ...prev,
+          empresa: usuarioData.empresa || "",
+        }));
       }
-    };
 
-    const auth = getAuth();
-    const currentUser = auth.currentUser;
+      let empresasList: Empresa[] = [];
+      let productsData: Product[] = [];
 
-    if (currentUser) {
-      fetchUserAndProducts(currentUser);
-    }
-  }, []);
+      if (usuarioData.rol === Roles.ADMIN) {
+        empresasList = await getEmpresas();
+        setEmpresas(empresasList);
 
+        const allProducts = await Promise.all(
+          empresasList.map((empresa) => getProductsByEmpresa(empresa.id!))
+        );
+        productsData = allProducts.flat();
+      } else {
+        const empresaId = usuarioData.empresa;
 
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      product.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.descripcion?.toLowerCase().includes(searchTerm.toLowerCase());
+        setEmpresas([
+          {
+            id: empresaId,
+            nombre: "Mi Empresa",
+            documento: "",
+            email: "",
+            pais: "",
+            telefono: "",
+          },
+        ]);
 
-    const matchesEmpresa =
-      empresaFilter === "" || product.empresa === empresaFilter;
+        productsData = await getProductsByEmpresa(empresaId);
+      }
 
-    const matchesStatus =
-      statusFilter === "todos" ||
-      (statusFilter === "activo" && product.status === Status.ACTIVO) ||
-      (statusFilter === "sinStock" && product.stock === 0);
-
-    return matchesSearch && matchesEmpresa && matchesStatus;
-  });
-
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case Status.ACTIVO:
-        return "bg-green-100 text-green-800";
-      case Status.SIN_STOCK:
-        return "bg-red-100 text-red-800";
-      case Status.PAUSADO:
-        return "bg-yellow-100 text-yellow-800";
-      default:
-        return "bg-gray-100 text-gray-800";
+      setProducts(productsData);
+    } catch (error) {
+      console.error("Error al obtener productos:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleAddProduct = async () => {
+
     let valuePath = "";
-    if (!newProduct.empresa && userData.rol === "admin") {
+    if(!newProduct.empresa){
+      valuePath = userData.empresa;
+    } else {
+      valuePath = newProduct.empresa;
+    }
+
+    if (!valuePath && userData.rol === Roles.ADMIN) {
       alert("Selecciona una empresa para el producto");
       return;
-    } 
-
-    if(userData.rol === "cliente"){
-      valuePath = userData.empresa
-    } else {
-      valuePath = userData.empresa
     }
 
     try {
-      const ref = collection(db, `empresas/${valuePath}/productos`);
-      await addDoc(ref, {
+      await addProduct(valuePath, {
         nombre: newProduct.nombre,
         descripcion: newProduct.descripcion,
         precio: newProduct.precio,
         stock: newProduct.stock,
         status: newProduct.status,
         imagen: newProduct.imagen,
+        empresa: valuePath,
       });
 
       setShowModal(false);
@@ -275,16 +228,11 @@ const Products = () => {
       });
 
       setLoading(true);
+
       const auth = getAuth();
       const user = auth.currentUser;
       if (user) {
-        const updatedUser = await getDoc(doc(db, "usuarios", user.uid));
-        if (updatedUser.exists()) {
-          const data = updatedUser.data() as Usuario;
-          if (data) {
-            await fetchUserAndProducts(user);
-          }
-        }
+        await fetchUserAndProducts({ uid: user.uid });
       }
     } catch (error) {
       console.error("Error al agregar producto:", error);
@@ -301,10 +249,7 @@ const Products = () => {
       product.status === Status.ACTIVO ? Status.PAUSADO : Status.ACTIVO;
 
     try {
-      const productRef = doc(db, `empresas/${product.empresa}/productos/${product.id}`);
-      await updateDoc(productRef, {
-        status: newStatus,
-      });
+      await updateProduct(product.empresa, product.id, { status: newStatus });
 
       setProducts((prevProducts) =>
         prevProducts.map((p) =>
@@ -316,10 +261,10 @@ const Products = () => {
     }
   };
 
+  
   const handleDeleteProduct = async (empresaId: string, productoId: string) => {
     try {
-      const productRef = doc(db, "empresas", empresaId, "productos", productoId);
-      await deleteDoc(productRef);
+      await deleteProduct(empresaId, productoId);
       console.log("Producto eliminado con éxito.");
 
       setProducts((prevProductos) =>
@@ -330,37 +275,13 @@ const Products = () => {
     }
   };
 
-  const fetchUserAndProducts = async (user: User) => {
-    const userRef = doc(db, "usuarios", user.uid);
-    const userSnap = await getDoc(userRef);
-    const usuarioData = userSnap.data() as Usuario;
-
-    const empresasList =
-      usuarioData.rol === "admin"
-        ? (
-            await getDocs(collection(db, "empresas"))
-          ).docs.map((doc) => ({ id: doc.id, nombre: doc.data().nombre }))
-        : [{ id: usuarioData.empresa, nombre: "Mi Empresa" }];
-
-    setEmpresas(empresasList);
-
-    let allProducts: Product[] = [];
-
-    for (const empresa of empresasList) {
-      const productosSnapshot = await getDocs(
-        collection(db, `empresas/${empresa.id}/productos`)
-      );
-      const productos = productosSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        empresa: empresa.id,
-        ...doc.data(),
-      })) as Product[];
-      allProducts.push(...productos);
+  useEffect(() => {
+    if (userProfile) {
+      fetchUserAndProducts({ uid: userProfile.uid });
     }
+  }, [userProfile]);
 
-    setProducts(allProducts);
-    setLoading(false);
-  };
+
 
   if (loading) {
     return (
@@ -414,7 +335,7 @@ const Products = () => {
                 className="max-w-md"
               />
 
-              {userProfile?.rol === "admin" && (
+              {userProfile?.rol === Roles.ADMIN && (
                 <select
                   value={empresaFilter}
                   onChange={(e) => setEmpresaFilter(e.target.value)}
@@ -494,7 +415,7 @@ const Products = () => {
               >
                 <option value={Status.ACTIVO}>Activo</option>
               </select>
-              {userProfile?.rol === "admin" ? (
+              {userProfile?.rol === Roles.ADMIN ? (
                 <select
                   value={newProduct.empresa}
                   onChange={(e) => setNewProduct({ ...newProduct, empresa: e.target.value })}
@@ -518,8 +439,6 @@ const Products = () => {
                   </option>
                 </select>
               )}
-
-              
 
               <Button onClick={editMode ? handleUpdateProduct : handleAddProduct} className="btn-primary w-full">
                 <Check className="w-4 h-4 mr-2" /> {editMode ? "Actualizar" : "Agregar"}
@@ -567,7 +486,7 @@ const Products = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {userData.rol === "admin" && (
+                    {userData.rol === Roles.ADMIN && (
                       <div className="text-sm text-gray-500 font-medium">
                         Empresa: {empresas.find(e => e.id === product.empresa)?.nombre || "Desconocida"}
                       </div>
@@ -646,7 +565,7 @@ const Products = () => {
               <div className="text-gray-600 font-medium">Sin Stock</div>
             </CardContent>
           </Card>
-          {(userData?.rol === "cliente" || (userData?.rol === "admin" && empresaFilter)) && (
+          {(userData?.rol === Roles.CLIENTE || (userData?.rol === Roles.ADMIN && empresaFilter)) && (
             <Card className="stat-card">
               <CardContent className="p-6 text-center">
                 <div className="text-3xl font-bold gradient-text mb-2">

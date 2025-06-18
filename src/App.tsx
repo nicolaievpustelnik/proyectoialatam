@@ -15,6 +15,7 @@ import AdminPanel from "./pages/AdminPanel";
 import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import Companies from "./pages/Companies";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,11 @@ const App = () => (
             <Route path="/products" element={
               <ProtectedRoute>
                 <Products />
+              </ProtectedRoute>
+            } />
+            <Route path="/companies" element={
+              <ProtectedRoute>
+                <Companies />
               </ProtectedRoute>
             } />
             <Route path="/orders" element={

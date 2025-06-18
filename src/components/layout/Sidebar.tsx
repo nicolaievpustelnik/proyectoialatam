@@ -20,15 +20,19 @@ const Sidebar = ({ className }: SidebarProps) => {
     { path: "/dashboard", label: "Dashboard", icon: Clock },
     { path: "/clients", label: "Clientes", icon: Users },
     { path: "/products", label: "Productos", icon: Check },
-    { path: "/orders", label: "Pedidos", icon: ArrowUp },
     { path: "/bot-config", label: "Config. Bot", icon: MessageSquare },
     { path: "/analytics", label: "Analytics", icon: ChartNoAxesCombined },
   ];
 
   if (userProfile?.rol === "admin") {
     menuItems.push(
+      { path: "/applications", label: "Solicitudes", icon: ArrowUp },
       { path: "/companies", label: "Empresas", icon: BriefcaseBusiness },
       { path: "/admins", label: "Administradores", icon: UserRoundCog },
+    );
+  } else {
+    menuItems.push(
+      { path: "/orders", label: "Pedidos", icon: ArrowUp },
     );
   }
 
